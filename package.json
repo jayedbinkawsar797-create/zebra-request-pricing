@@ -1,0 +1,17 @@
+{
+  "name": "zebra-request-pricing",
+  "version": "1.0.0",
+  "description": "Zebra Golf Cart - Request Pricing Landing Page & Lead Funnel",
+  "scripts": {
+    "dev": "npx serve -l 3000 .",
+    "start": "npx serve -l 3000 ."
+  },
+  "keywords": [
+    "zebra-golf-cart",
+    "lead-gen",
+    "landing-page",
+    "pricing-request"
+  ],
+  "author": "jayedbinkawsar797-create",
+  "license": "ISC"
+}
