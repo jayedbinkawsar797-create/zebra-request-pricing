@@ -5,6 +5,7 @@ import multer from 'multer';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import fetch from 'node-fetch'; // We will use native fetch or install node-fetch if needed (Node 18+ has native fetch)
 
 dotenv.config();
 
@@ -18,7 +19,6 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Serve static frontend files (index.html, css, etc.)
 app.use(express.static(__dirname));
 
 const upload = multer();
@@ -91,6 +91,25 @@ app.post('/api/leads', upload.none(), async (req, res) => {
 
     const result = await pool.query(insertQuery, values);
     console.log(`🎉 New Lead saved to database! ID: ${result.rows[0].id}`);
+
+    // 🔥 NEW: Trigger the AI Assistant to send the first text message!
+    try {
+        const aiPayload = {
+            first_name: data.first_name || 'there',
+            phone_number: data.phone_number || '',
+            model_interest: data.model_interest || 'Zebra Golf Cart'
+        };
+        
+        // This hits the Python AI app you deployed on Railway
+        await fetch('https://zebra-ai-assistant-production.up.railway.app/api/new-lead', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(aiPayload)
+        });
+        console.log(`🤖 Triggered AI Outreach for ${data.phone_number}`);
+    } catch (aiErr) {
+        console.error("❌ Failed to trigger AI outreach:", aiErr);
+    }
 
     if (req.headers.accept === 'application/json') {
       return res.status(200).json({ success: true, lead_id: result.rows[0].id });
