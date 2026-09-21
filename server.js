@@ -35,8 +35,20 @@ app.post('/api/leads', upload.none(), async (req, res) => {
       return res.status(200).json({ success: true, message: "Honeypot triggered" });
     }
 
-    // ULTRA AUDIT FIX: Used ON CONFLICT DO UPDATE so if a customer submits the form twice, 
-    // it doesn't crash the website with a Postgres Unique Constraint error!
+    // Map HTML form names to backend variables
+    const firstName = data.first_name || data['First name'] || '';
+    const lastName = data.last_name || data['Last name'] || '';
+    const phone = data.phone_number || data['Phone'] || '';
+    const email = data.email || data['Email'] || '';
+    const zipCode = data.zip_code || data['ZIP code'] || '';
+    const model = data.model_interest || data['Model interest'] || '';
+    const timeline = data.buying_timeline || data['Purchase timeline'] || '';
+    const budget = data.budget_preference || data['Estimated budget'] || '';
+    const utmSource = data.utm_source || data['UTM source'] || '';
+    const utmCampaign = data.utm_campaign || data['UTM campaign'] || '';
+    const fbclid = data.fbclid || data['Facebook click ID'] || '';
+    const landingPageUrl = data.landing_page_url || data['Landing page URL'] || data['landing-page-url'] || '';
+
     const insertQuery = `
       INSERT INTO zebra_leads (
         first_name, last_name, phone_number, email, zip_code, 
@@ -52,39 +64,34 @@ app.post('/api/leads', upload.none(), async (req, res) => {
     `;
 
     const values = [
-      data.first_name || '',
-      data.last_name || '',
-      data.phone_number || '',
-      data.email || '',
-      data.zip_code || '',
-      data.model_interest || '',
-      data.buying_timeline || '',
-      data.budget_preference || '',
-      data.utm_source || '',
-      data.utm_campaign || '',
-      data.fbclid || '',
-      data['landing-page-url'] || ''
+      firstName, lastName, phone, email, zipCode, model, 
+      timeline, budget, utmSource, utmCampaign, fbclid, landingPageUrl
     ];
 
-    const result = await pool.query(insertQuery, values);
-    
-    try {
-        const aiPayload = {
-            first_name: data.first_name || 'there',
-            phone_number: data.phone_number || '',
-            model_interest: data.model_interest || 'Zebra Golf Cart'
-        };
-        await fetch('https://zebra-ai-assistant-production.up.railway.app/api/new-lead', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(aiPayload)
-        });
-    } catch (aiErr) {
-        console.error("❌ Failed to trigger AI outreach:", aiErr);
+    if (!phone) {
+        console.error("❌ Phone number is empty, cannot trigger AI!");
+    } else {
+        const result = await pool.query(insertQuery, values);
+        
+        try {
+            const aiPayload = {
+                first_name: firstName,
+                phone_number: phone,
+                model_interest: model
+            };
+            await fetch('https://zebra-ai-assistant-production.up.railway.app/api/new-lead', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(aiPayload)
+            });
+            console.log(`🤖 Triggered AI Outreach for ${phone}`);
+        } catch (aiErr) {
+            console.error("❌ Failed to trigger AI outreach:", aiErr);
+        }
     }
 
     if (req.headers.accept === 'application/json') {
-      return res.status(200).json({ success: true, lead_id: result.rows[0].id });
+      return res.status(200).json({ success: true });
     }
     res.redirect('/thank-you.html');
   } catch (err) {
